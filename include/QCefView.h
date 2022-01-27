@@ -216,6 +216,23 @@ signals:
   /// <param name="method">The method name</param>
   /// <param name="arguments">The arguments list</param>
   void invokeMethod(int browserId, int frameId, const QString& method, const QVariantList& arguments);
+
+protected slots:
+  void onCefFocusEvent(bool next);
+
+protected:
+  virtual void paintEvent(QPaintEvent* event) override;
+
+  virtual void keyPressEvent(QKeyEvent* event) override;
+  virtual void keyReleaseEvent(QKeyEvent* event) override;
+  virtual void mouseMoveEvent(QMouseEvent* event) override;
+  virtual void mousePressEvent(QMouseEvent* event) override;
+  virtual void mouseReleaseEvent(QMouseEvent* event) override;
+  virtual void wheelEvent(QWheelEvent* event) override;
+  virtual void resizeEvent(QResizeEvent* event) override;
+
+  virtual void focusInEvent(QFocusEvent* event) override;
+  virtual void focusOutEvent(QFocusEvent* event) override;
 };
 
 #endif // QCEFVIEW_H

@@ -1,5 +1,6 @@
 ﻿#pragma once
 #pragma region qt_headers
+#include <QImage>
 #include <QString>
 #include <QWindow>
 #pragma endregion qt_headers
@@ -17,6 +18,8 @@ class QCefViewPrivate : public QObject
   Q_DECLARE_PUBLIC(QCefView)
   QCefView* q_ptr;
 
+  friend class CCefClientDelegate;
+
 private:
   /// <summary>
   ///
@@ -31,15 +34,10 @@ private:
   /// <summary>
   ///
   /// </summary>
-  QWindow* qBrowserWindow_;
-
-  /// <summary>
-  ///
-  /// </summary>
-  QWidget* qBrowserWidget_;
+  QImage qCefFrameBuffer_;
 
 protected:
-  void createBrowser(const QString url, const QCefSettingPrivate* setting);
+  void createBrowser(QCefView* view, const QString url, const QCefSettingPrivate* setting);
 
   void closeBrowser();
 
@@ -77,6 +75,10 @@ public:
   void notifyMoveOrResizeStarted();
 
   bool sendEventNotifyMessage(int frameId, const QString& name, const QVariantList& args);
+
+  void setFocus(bool focus);
+
+  void paintCefFrameBuffer(const uchar* buf, int width, int height);
 
 protected:
   /// <summary>

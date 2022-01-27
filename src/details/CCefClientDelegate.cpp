@@ -1,13 +1,29 @@
 ﻿#include "CCefClientDelegate.h"
 
+#pragma region qt_headers
+#include <QPoint>
+#include <QRect>
+#pragma endregion qt_headers
+
+#include "QCefViewPrivate.h"
 #include "ValueConvertor.h"
 
-#include "QCefView.h"
+#include <QCefView.h>
 
-CCefClientDelegate::CCefClientDelegate() {}
+QCefViewPrivate*
+CCefClientDelegate::take(CefRefPtr<CefBrowser>& browser)
+{
+  if (!browser)
+    return nullptr;
+  auto it = view_map_.find(browser->GetIdentifier());
+  if (it == view_map_.end())
+    return nullptr;
+
+  return it->second;
+}
 
 void
-CCefClientDelegate::insertBrowserViewMapping(CefRefPtr<CefBrowser>& browser, QCefView* view)
+CCefClientDelegate::insertBrowserViewMapping(CefRefPtr<CefBrowser>& browser, QCefViewPrivate* view)
 {
   auto id = browser->GetIdentifier();
   view_map_[id] = view;
@@ -26,25 +42,25 @@ CCefClientDelegate::loadingStateChanged(CefRefPtr<CefBrowser>& browser,
                                         bool canGoBack,
                                         bool canGoForward)
 {
-  auto view = take(browser);
-  if (view)
-    view->loadingStateChanged(isLoading, canGoBack, canGoForward);
+  auto p = take(browser);
+  if (p)
+    p->q_ptr->loadingStateChanged(isLoading, canGoBack, canGoForward);
 }
 
 void
 CCefClientDelegate::loadStart(CefRefPtr<CefBrowser>& browser)
 {
-  auto view = take(browser);
-  if (view)
-    view->loadStart();
+  auto p = take(browser);
+  if (p)
+    p->q_ptr->loadStart();
 }
 
 void
 CCefClientDelegate::loadEnd(CefRefPtr<CefBrowser>& browser, int httpStatusCode)
 {
-  auto view = take(browser);
-  if (view)
-    view->loadEnd(httpStatusCode);
+  auto p = take(browser);
+  if (p)
+    p->q_ptr->loadEnd(httpStatusCode);
 }
 
 void
@@ -54,11 +70,11 @@ CCefClientDelegate::loadError(CefRefPtr<CefBrowser>& browser,
                               const std::string& failedUrl,
                               bool& handled)
 {
-  auto view = take(browser);
-  if (view) {
+  auto p = take(browser);
+  if (p) {
     auto msg = QString::fromStdString(errorMsg);
     auto url = QString::fromStdString(failedUrl);
-    view->loadError(errorCode, msg, url, handled);
+    p->q_ptr->loadError(errorCode, msg, url, handled);
   }
 }
 
@@ -66,8 +82,8 @@ void
 CCefClientDelegate::draggableRegionChanged(CefRefPtr<CefBrowser>& browser,
                                            const std::vector<CefDraggableRegion>& regions)
 {
-  auto view = take(browser);
-  if (!view)
+  auto p = take(browser);
+  if (!p)
     return;
 
   // Determine new draggable region.
@@ -82,25 +98,46 @@ CCefClientDelegate::draggableRegionChanged(CefRefPtr<CefBrowser>& browser,
     }
   }
 
-  view->draggableRegionChanged(draggableRegion, nonDraggableRegion);
+  p->q_ptr->draggableRegionChanged(draggableRegion, nonDraggableRegion);
 }
 
 void
 CCefClientDelegate::consoleMessage(CefRefPtr<CefBrowser>& browser, const std::string& message, int level)
 {
-  auto view = take(browser);
-  if (view) {
+  auto p = take(browser);
+  if (p) {
     auto msg = QString::fromStdString(message);
-    view->consoleMessage(msg, level);
+    p->q_ptr->consoleMessage(msg, level);
   }
 }
 
 void
 CCefClientDelegate::takeFocus(CefRefPtr<CefBrowser>& browser, bool next)
 {
-  auto view = take(browser);
-  if (view)
-    view->takeFocus(next);
+  auto p = take(browser);
+  if (p) {
+    p->q_ptr->takeFocus(next);
+  }
+}
+
+bool
+CCefClientDelegate::setFocus(CefRefPtr<CefBrowser>& browser)
+{
+  auto p = take(browser);
+  if (p) {
+    return false;
+  }
+
+  return true;
+}
+
+void
+CCefClientDelegate::gotFocus(CefRefPtr<CefBrowser>& browser)
+{
+  auto p = take(browser);
+  if (p) {
+    p->q_ptr->setFocus();
+  }
 }
 
 void
@@ -120,11 +157,11 @@ CCefClientDelegate::processQueryRequest(CefRefPtr<CefBrowser>& browser,
                                         const std::string& request,
                                         const int64_t query_id)
 {
-  auto view = take(browser);
-  if (view) {
+  auto p = take(browser);
+  if (p) {
     auto browserId = browser->GetIdentifier();
     auto req = QString::fromStdString(request);
-    view->cefQueryRequest(browserId, frameId, QCefQuery(req, query_id));
+    p->q_ptr->cefQueryRequest(browserId, frameId, QCefQuery(req, query_id));
   }
 }
 
@@ -134,8 +171,8 @@ CCefClientDelegate::invokeMethodNotify(CefRefPtr<CefBrowser>& browser,
                                        const std::string& method,
                                        const CefRefPtr<CefListValue>& arguments)
 {
-  auto view = take(browser);
-  if (!view)
+  auto p = take(browser);
+  if (!p)
     return;
 
   auto m = QString::fromStdString(method);
@@ -148,17 +185,81 @@ CCefClientDelegate::invokeMethodNotify(CefRefPtr<CefBrowser>& browser,
   }
 
   auto browserId = browser->GetIdentifier();
-  view->invokeMethod(browserId, frameId, m, args);
+  p->q_ptr->invokeMethod(browserId, frameId, m, args);
 }
 
-QCefView*
-CCefClientDelegate::take(CefRefPtr<CefBrowser>& browser)
+bool
+CCefClientDelegate::GetRootScreenRect(CefRefPtr<CefBrowser> browser, CefRect& rect)
 {
-  if (!browser)
-    return nullptr;
-  auto it = view_map_.find(browser->GetIdentifier());
-  if (it == view_map_.end())
-    return nullptr;
+  auto p = take(browser);
+  if (!p) {
+    return false;
+  }
 
-  return it->second;
+  QRect rcWindow = p->q_ptr->window()->frameGeometry();
+  rect.Set(rcWindow.left(), rcWindow.right(), rcWindow.width(), rcWindow.height());
+  return true;
+}
+
+void
+CCefClientDelegate::GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& rect)
+{
+  auto p = take(browser);
+  if (!p) {
+    rect.Set(0, 0, 1, 1);
+    return;
+  }
+
+  QRect rcView = p->q_ptr->frameGeometry();
+  QPoint ptScreen = p->q_ptr->mapToGlobal(rcView.topLeft());
+  rect.Set(ptScreen.x(), ptScreen.y(), rcView.width(), rcView.height());
+}
+
+bool
+CCefClientDelegate::GetScreenPoint(CefRefPtr<CefBrowser> browser, int viewX, int viewY, int& screenX, int& screenY)
+{
+  auto p = take(browser);
+  if (!p) {
+    return false;
+  }
+
+  QPoint ptScreen = p->q_ptr->mapToGlobal(QPoint(viewX, viewY));
+  screenX = ptScreen.x();
+  screenY = ptScreen.y();
+  return true;
+}
+
+bool
+CCefClientDelegate::GetScreenInfo(CefRefPtr<CefBrowser> browser, CefScreenInfo& screen_info)
+{
+  auto p = take(browser);
+  if (!p) {
+    return false;
+  }
+
+  return false;
+}
+
+void
+CCefClientDelegate::OnPopupShow(CefRefPtr<CefBrowser> browser, bool show)
+{}
+
+void
+CCefClientDelegate::OnPopupSize(CefRefPtr<CefBrowser> browser, const CefRect& rect)
+{}
+
+void
+CCefClientDelegate::OnPaint(CefRefPtr<CefBrowser> browser,
+                            CefRenderHandler::PaintElementType type,
+                            const CefRenderHandler::RectList& dirtyRects,
+                            const void* buffer,
+                            int width,
+                            int height)
+{
+  auto p = take(browser);
+  if (!p) {
+    return;
+  }
+
+  p->paintCefFrameBuffer(static_cast<const uchar*>(buffer), width, height);
 }

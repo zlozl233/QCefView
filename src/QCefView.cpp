@@ -1,9 +1,11 @@
 ﻿#include <QCefView.h>
 
 #pragma region qt_headers
+#include <QDebug>
+#include <QPaintDevice>
+#include <QPainter>
 #include <QPoint>
 #include <QResizeEvent>
-#include <QVBoxLayout>
 #pragma endregion qt_headers
 
 #include <QCefContext.h>
@@ -15,12 +17,9 @@ QCefView::QCefView(const QString url, const QCefSetting* setting, QWidget* paren
   : QWidget(parent)
   , d_ptr(new QCefViewPrivate(this, url, setting ? setting->d_func() : nullptr))
 {
-  // initialize the layout and
-  // add browser widget to the layout
-  QVBoxLayout* layout = new QVBoxLayout();
-  layout->setContentsMargins(0, 0, 0, 0);
-  layout->addWidget(d_ptr->qBrowserWidget_);
-  setLayout(layout);
+  setMouseTracking(true);
+  setFocusPolicy(Qt::StrongFocus);
+  connect(this, SIGNAL(takeFocus(bool)), this, SLOT(onCefFocusEvent(bool)));
 }
 
 QCefView::QCefView(QWidget* parent /*= 0*/)
@@ -139,4 +138,156 @@ QCefView::responseQCefQuery(const QCefQuery& query)
   Q_D(QCefView);
 
   return d->responseQCefQuery(query);
+}
+
+void
+QCefView::onCefFocusEvent(bool next)
+{
+  if (!focusNextPrevChild(next)) {
+    qWarning() << "Failed to focusNextPrevChild(" << next << ")";
+  }
+}
+
+void
+QCefView::paintEvent(QPaintEvent* event)
+{
+  QWidget::paintEvent(event);
+
+  Q_D(QCefView);
+
+  if (d->qCefFrameBuffer_.isNull())
+    return;
+
+  QPainter painter(this);
+  painter.drawImage(frameGeometry(), d->qCefFrameBuffer_);
+}
+
+void
+QCefView::keyPressEvent(QKeyEvent* event)
+{
+  CefKeyEvent e;
+  e.type = KEYEVENT_KEYDOWN;
+  e.windows_key_code = event->key();
+  e.native_key_code = event->nativeScanCode();
+  e.is_system_key = false;
+  e.character = event->nativeVirtualKey();
+  // e.unmodified_character = 0;
+  e.focus_on_editable_field = false;
+
+  Q_D(QCefView);
+  d->pCefBrowser_->GetHost()->SendKeyEvent(e);
+}
+
+void
+QCefView::keyReleaseEvent(QKeyEvent* event)
+{
+  CefKeyEvent e;
+  e.type = KEYEVENT_KEYUP;
+  e.windows_key_code = event->key();
+  e.native_key_code = event->nativeScanCode();
+  e.is_system_key = false;
+  e.character = event->nativeVirtualKey();
+  // e.unmodified_character = 0;
+  e.focus_on_editable_field = false;
+
+  Q_D(QCefView);
+  d->pCefBrowser_->GetHost()->SendKeyEvent(e);
+}
+
+void
+QCefView::mouseMoveEvent(QMouseEvent* event)
+{
+  CefMouseEvent e;
+  e.x = event->pos().x();
+  e.y = event->pos().y();
+
+  Q_D(QCefView);
+
+  d->pCefBrowser_->GetHost()->SendMouseMoveEvent(e, false);
+}
+
+void
+QCefView::mousePressEvent(QMouseEvent* event)
+{
+  CefMouseEvent e;
+  e.x = event->pos().x();
+  e.y = event->pos().y();
+
+  CefBrowserHost::MouseButtonType t;
+  switch (event->button()) {
+    case Qt::LeftButton: {
+      t = MBT_LEFT;
+    } break;
+    case Qt::RightButton: {
+      t = MBT_RIGHT;
+    } break;
+    case Qt::MiddleButton: {
+      t = MBT_MIDDLE;
+    } break;
+    default:
+      break;
+  }
+
+  Q_D(QCefView);
+  d->pCefBrowser_->GetHost()->SendMouseClickEvent(e, t, false, 1);
+}
+
+void
+QCefView::mouseReleaseEvent(QMouseEvent* event)
+{
+  CefMouseEvent e;
+  e.x = event->pos().x();
+  e.y = event->pos().y();
+
+  CefBrowserHost::MouseButtonType t;
+  switch (event->button()) {
+    case Qt::LeftButton: {
+      t = MBT_LEFT;
+    } break;
+    case Qt::RightButton: {
+      t = MBT_RIGHT;
+    } break;
+    case Qt::MiddleButton: {
+      t = MBT_MIDDLE;
+    } break;
+    default:
+      break;
+  }
+
+  Q_D(QCefView);
+  d->pCefBrowser_->GetHost()->SendMouseClickEvent(e, t, true, 1);
+}
+
+void
+QCefView::wheelEvent(QWheelEvent* event)
+{
+  CefMouseEvent e;
+  e.x = event->position().x();
+  e.y = event->position().y();
+
+  Q_D(QCefView);
+  d->pCefBrowser_->GetHost()->SendMouseWheelEvent(e, event->pixelDelta().x(), event->pixelDelta().y());
+}
+
+void
+QCefView::resizeEvent(QResizeEvent* event)
+{
+  QWidget::resizeEvent(event);
+
+  Q_D(QCefView);
+  d->pCefBrowser_->GetHost()->WasResized();
+}
+
+void
+QCefView::focusInEvent(QFocusEvent* event)
+{
+  Q_D(QCefView);
+  d->pCefBrowser_->GetHost()->SendFocusEvent(true);
+}
+
+void
+QCefView::focusOutEvent(QFocusEvent* event)
+{
+  Q_D(QCefView);
+  d->pCefBrowser_->GetHost()->SendFocusEvent(false);
 }
