@@ -1,6 +1,7 @@
 ﻿#include "CCefClientDelegate.h"
 
 #pragma region qt_headers
+#include <QCursor>
 #include <QPoint>
 #include <QRect>
 #pragma endregion qt_headers
@@ -108,6 +109,22 @@ CCefClientDelegate::consoleMessage(CefRefPtr<CefBrowser>& browser, const std::st
   if (p) {
     auto msg = QString::fromStdString(message);
     p->q_ptr->consoleMessage(msg, level);
+  }
+}
+
+void
+CCefClientDelegate::cursorChanged(CefRefPtr<CefBrowser> browser,
+                                  CefCursorHandle cursor,
+                                  cef_cursor_type_t type,
+                                  const CefCursorInfo& custom_cursor_info)
+{
+  auto p = take(browser);
+  if (p) {
+#if defined(OS_WINDOWS)
+    ::SetCursor(cursor);
+#elif defined(OS_MACOS)
+#else
+#endif
   }
 }
 

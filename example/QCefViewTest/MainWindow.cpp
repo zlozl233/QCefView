@@ -39,7 +39,7 @@ MainWindow::MainWindow(QWidget* parent)
   setting.setBackgroundColor(QColor::fromRgba(qRgba(250, 249, 222, 255)));
 
   // create the QCefView widget and add it to the layout container
-  cefViewWidget = new QCefView(INDEX_URL, &setting, this);
+  cefViewWidget = new QCefView("www.baidu.com" /*INDEX_URL*/, &setting, this);
   ui.cefContainer->layout()->addWidget(cefViewWidget);
   layout->addWidget(ui.cefContainer);
 

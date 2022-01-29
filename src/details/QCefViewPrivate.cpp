@@ -65,7 +65,6 @@ QCefViewPrivate::createBrowser(QCefView* view, const QString url, const QCefSett
   pContext_->pClientDelegate_->insertBrowserViewMapping(pCefBrowser, this);
   pCefBrowser_ = pCefBrowser;
 
-  view->window()->installEventFilter(this);
   return;
 }
 
@@ -260,42 +259,118 @@ QCefViewPrivate::paintCefFrameBuffer(const uchar* buf, int width, int height)
   q->update();
 }
 
-bool
-QCefViewPrivate::eventFilter(QObject* watched, QEvent* event)
+void
+QCefViewPrivate::updateDragCursor(int operation)
 {
-  Q_Q(QCefView);
+  qDebug() << "cursor operation";
+}
 
-  // filter event from top level window
-  if (watched == q->window()) {
-    switch (event->type()) {
-      case QEvent::ParentAboutToChange: {
-        q->window()->removeEventFilter(this);
-      } break;
-      case QEvent::ParentChange: {
-        q->window()->installEventFilter(this);
-      } break;
-      case QEvent::Move:
-      case QEvent::Resize: {
-        notifyMoveOrResizeStarted();
-      } break;
-      default:
-        break;
-    }
+void
+QCefViewPrivate::onPaint(QPainter& painter)
+{
+  if (!pCefBrowser_ || qCefFrameBuffer_.isNull())
+    return;
+
+  painter.drawImage(0, 0, qCefFrameBuffer_);
+}
+
+void
+QCefViewPrivate::onResize()
+{
+  if (!pCefBrowser_)
+    return;
+
+  pCefBrowser_->GetHost()->WasResized();
+  pCefBrowser_->GetHost()->NotifyMoveOrResizeStarted();
+}
+
+void
+QCefViewPrivate::onKeyEvent(QKeyEvent* event, bool down)
+{
+  if (!pCefBrowser_)
+    return;
+
+  CefKeyEvent e;
+  e.type = down ? KEYEVENT_KEYDOWN : KEYEVENT_KEYUP;
+  e.windows_key_code = event->key();
+  e.native_key_code = event->nativeScanCode();
+  e.is_system_key = false;
+  e.character = event->key();
+  // e.unmodified_character = 0;
+  e.focus_on_editable_field = false;
+  e.modifiers = event->nativeModifiers();
+
+  pCefBrowser_->GetHost()->SendKeyEvent(e);
+}
+
+void
+QCefViewPrivate::onMouseMoveEvent(QMouseEvent* event)
+{
+  if (!pCefBrowser_)
+    return;
+
+  CefMouseEvent e;
+  e.x = event->pos().x();
+  e.y = event->pos().y();
+  pCefBrowser_->GetHost()->SendMouseMoveEvent(e, false);
+}
+
+void
+QCefViewPrivate::onMouseClickEvent(QMouseEvent* event, bool up)
+{
+  if (!pCefBrowser_)
+    return;
+
+  CefMouseEvent e;
+  e.x = event->pos().x();
+  e.y = event->pos().y();
+
+  CefBrowserHost::MouseButtonType t;
+  switch (event->button()) {
+    case Qt::LeftButton: {
+      t = MBT_LEFT;
+    } break;
+    case Qt::RightButton: {
+      t = MBT_RIGHT;
+    } break;
+    case Qt::MiddleButton: {
+      t = MBT_MIDDLE;
+    } break;
+    default:
+      break;
   }
 
-  //// filter event from the browser window
-  // if (watched == qBrowserWindow_) {
-  //  qDebug() << "==== browser window event:" << event->type();
+  pCefBrowser_->GetHost()->SendMouseClickEvent(e, t, up, 1);
+}
 
-  //  if (QEvent::PlatformSurface == event->type()) {
-  //    auto e = (QPlatformSurfaceEvent*)event;
-  //    auto sufaceType = e->surfaceEventType();
-  //    if (e->surfaceEventType() == QPlatformSurfaceEvent::SurfaceAboutToBeDestroyed) {
-  //      // browser window is being destroyed, need to close the browser window in advance
-  //      closeBrowser();
-  //    }
-  //  }
-  //}
+void
+QCefViewPrivate::onMouseWheelEvent(QWheelEvent* event)
+{
+  if (!pCefBrowser_)
+    return;
 
-  return QObject::eventFilter(watched, event);
+  CefMouseEvent e;
+  e.x = event->position().x();
+  e.y = event->position().y();
+
+  QPoint numPixels = event->pixelDelta();
+  QPoint numDegrees = event->angleDelta() / 8;
+  QPoint delta;
+
+  if (!numPixels.isNull()) {
+    delta = numPixels;
+  } else if (!numDegrees.isNull()) {
+    delta = numDegrees / 15;
+  }
+
+  // pCefBrowser_->GetHost()->SendMouseWheelEvent(e, 1, 1);
+}
+
+void
+QCefViewPrivate::onFocusEvent(QFocusEvent* event, bool focusIn)
+{
+  if (!pCefBrowser_)
+    return;
+
+  pCefBrowser_->GetHost()->SendFocusEvent(focusIn);
 }

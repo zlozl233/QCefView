@@ -49,6 +49,11 @@ public:
 
   virtual void consoleMessage(CefRefPtr<CefBrowser>& browser, const std::string& message, int level) override;
 
+  virtual void cursorChanged(CefRefPtr<CefBrowser> browser,
+                             CefCursorHandle cursor,
+                             cef_cursor_type_t type,
+                             const CefCursorInfo& custom_cursor_info) override;
+
   virtual void takeFocus(CefRefPtr<CefBrowser>& browser, bool next) override;
 
   virtual bool setFocus(CefRefPtr<CefBrowser>& browser) override;

@@ -80,12 +80,13 @@ public:
 
   void paintCefFrameBuffer(const uchar* buf, int width, int height);
 
-protected:
-  /// <summary>
-  ///
-  /// </summary>
-  /// <param name="watched"></param>
-  /// <param name="event"></param>
-  /// <returns></returns>
-  virtual bool eventFilter(QObject* watched, QEvent* event) override;
+  void updateDragCursor(int operation);
+
+  void onPaint(QPainter& painter);
+  void onResize();
+  void onKeyEvent(QKeyEvent* event, bool down);
+  void onMouseMoveEvent(QMouseEvent* event);
+  void onMouseClickEvent(QMouseEvent* event, bool up);
+  void onMouseWheelEvent(QWheelEvent* event);
+  void onFocusEvent(QFocusEvent* event, bool focusIn);
 };
