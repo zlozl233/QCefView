@@ -26,12 +26,12 @@ include_directories(
 )
 
 file(GLOB_RECURSE _SRC_FILES
-  "*.h"
-  "*.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/*.h"
+  "${CMAKE_CURRENT_LIST_DIR}/*.cpp"
 )
 
 file(GLOB_RECURSE _UI_FILES
-  "*.ui"
+  "${CMAKE_CURRENT_LIST_DIR}/*.ui"
 )
 source_group("Form Files" ${_UI_FILES})
 
@@ -39,14 +39,14 @@ configure_file(index.in.html webres/index.html COPYONLY)
 configure_file(tutorial.in.html webres/tutorial.html COPYONLY)
 
 file(GLOB_RECURSE _WEB_FILES 
-  "*.html"
+  "${CMAKE_BINARY_DIR}/webres/*.html"
 )
 source_group("Webres Files" ${_WEB_FILES})
 
 if (OS_WINDOWS)
   file(GLOB_RECURSE _RES_FILES
-    "*.qrc"
-    "*.rc"
+    "${CMAKE_CURRENT_LIST_DIR}/*.qrc"
+    "${CMAKE_CURRENT_LIST_DIR}/*.rc"
   )
   source_group("Resource Files" ${_RES_FILES})
 
@@ -100,7 +100,7 @@ endif() # OS_WINDOWS
 
 if (OS_LINUX)
   file(GLOB_RECURSE _RES_FILES
-    "*.qrc"
+    "${CMAKE_CURRENT_LIST_DIR}/*.qrc"
   )
   source_group("Resource Files" ${_RES_FILES})
 

@@ -74,7 +74,7 @@ QCefContextPrivate::onAboutToQuit()
 
   // keep processing events till all browser closed
   QCoreApplication::processEvents();
-  while (!pClient_->HasOneRef() || pClient_->GetBrowserCount()) {
+  while (pClient_->GetBrowserCount()) {
     QCoreApplication::processEvents();
   }
 }

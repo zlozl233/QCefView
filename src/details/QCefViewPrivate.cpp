@@ -65,6 +65,8 @@ QCefViewPrivate::createBrowser(QCefView* view, const QString url, const QCefSett
   pContext_->pClientDelegate_->insertBrowserViewMapping(pCefBrowser, this);
   pCefBrowser_ = pCefBrowser;
 
+  // close the browser when app is doubt to exit
+  connect(QCoreApplication::instance(), SIGNAL(onAboutToQuit()), this, SLOT(onAboutToQuit()));
   return;
 }
 
@@ -89,6 +91,12 @@ QCefViewPrivate::destroyBrowser()
 {
   // close again
   closeBrowser();
+}
+
+void
+QCefViewPrivate::onAboutToQuit()
+{
+  destroyBrowser();
 }
 
 int

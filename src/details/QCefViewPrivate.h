@@ -43,6 +43,9 @@ protected:
 
   void destroyBrowser();
 
+protected slots:
+  void onAboutToQuit();
+
 public:
   explicit QCefViewPrivate(QCefView* view, const QString& url, const QCefSettingPrivate* setting = nullptr);
 

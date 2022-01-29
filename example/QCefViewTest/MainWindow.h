@@ -5,8 +5,6 @@
 
 #include "ui_MainWindow.h"
 
-#include <QCefView.h>
-
 class MainWindow : public QMainWindow
 {
   Q_OBJECT
@@ -16,13 +14,9 @@ public:
   ~MainWindow();
 
 protected slots:
-  void onBtnChangeColorClicked();
+  void onCreateTabRequest();
 
-  void onDraggableRegionChanged(const QRegion& draggableRegion, const QRegion& nonDraggableRegion);
-
-  void onInvokeMethod(int browserId, int frameId, const QString& method, const QVariantList& arguments);
-
-  void onQCefQueryRequest(int browserId, int frameId, const QCefQuery& query);
+  void onCloseTabRequest(int);
 
 private:
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -33,10 +27,6 @@ private:
 
 private:
   Ui::MainWindow ui;
-
-  QCefView* cefViewWidget;
-  QRegion draggableRegion_;
-  QRegion nonDraggableRegion_;
 };
 
 #endif // QCEFVIEWTEST_H

@@ -161,7 +161,11 @@ QCefView::paintEvent(QPaintEvent* event)
 void
 QCefView::resizeEvent(QResizeEvent* event)
 {
+  if (!event->size().width() || !event->size().height())
+    return;
+
   Q_D(QCefView);
+
   d->onResize();
 }
 
