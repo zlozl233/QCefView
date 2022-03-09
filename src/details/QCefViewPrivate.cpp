@@ -330,14 +330,18 @@ bool
 QCefViewPrivate::executeJavascript(int64_t frameId, const QString& code, const QString& url)
 {
   if (pCefBrowser_) {
-    CefRefPtr<CefFrame> frame = pCefBrowser_->GetFrame(frameId);
+    auto frame = frameId == 0 ? pCefBrowser_->GetMainFrame() : pCefBrowser_->GetFrame(frameId);
+    //CefRefPtr<CefFrame> frame = pCefBrowser_->GetFrame(frameId);
     if (frame) {
       CefString c;
       c.FromString(code.toStdString());
 
       CefString u;
-      u.FromString(url.toStdString());
-
+      if (url.isEmpty()) {
+        u = frame->GetURL();
+      } else {
+        u.FromString(url.toStdString());
+      }
       frame->ExecuteJavaScript(c, u, 0);
 
       return true;
