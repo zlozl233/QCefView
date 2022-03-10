@@ -54,7 +54,7 @@ QCefViewPrivate::createBrowser(QCefView* view, const QString url, const QCefSett
 
   // Set window info
   CefWindowInfo window_info;
-  //window_info.SetAsChild((CefWindowHandle)(fakeParent.winId()), { 0, 0, 0, 0 });
+  window_info.SetAsChild((CefWindowHandle)(fakeParent.winId()), { 0, 0, 0, 0 });
 
   // create the browser settings
   CefBrowserSettings browserSettings;
